@@ -1,0 +1,108 @@
+#
+# Makefile mapreduce client
+# NOTE: require GNU make
+#
+
+all: prepare build
+	@echo ""
+	
+MAKEFILE_PATH = $(abspath $(lastword $(MAKEFILE_LIST)))
+MAKEFILE_DIR  = $(dir $(MAKEFILE_PATH))
+
+BUILD_ROOT = ..
+
+BUILD_DIR      = $(PWD)
+COMMON_SRC_DIR = $(BUILD_ROOT)/src/common
+SRC_DIR        = $(BUILD_ROOT)/src/client
+BIN_DIR        = $(BUILD_ROOT)/bin
+
+TARGET_NAME = client
+
+TARGET_EXE  = $(BIN_DIR)/$(TARGET_NAME)
+
+COMMON_SUBDIRS = $(shell find $(COMMON_SRC_DIR) -type d | sort -r)
+EXE_SUBDIRS = $(shell find $(SRC_DIR) -type d | sort -r)
+SUBDIRS = $(shell echo $(COMMON_SUBDIRS) $(EXE_SUBDIRS) | sort | uniq )
+
+COMMON_SRC_FILES = $(shell find $(COMMON_SRC_DIR) -name *.cpp)
+EXE_SRC_FILES = $(shell find $(EXE_SUBDIRS) -name *.cpp)
+
+SRC_FILES = $(COMMON_SRC_FILES) $(EXE_SRC_FILES)
+OBJ_FILES = $(SRC_FILES:%.cpp=%.o)
+INCL_DIRS = $(addprefix -I, $(SUBDIRS))
+
+CCC	    = g++
+
+INCLUDES    = -I. $(INCL_DIRS) 
+ 
+# NOTE: levels are -std=c++11 -std=c++14 -std=c++17 -std=c++2a
+CPPFLAGS    = -Wall -g -std=c++2a -D_MR_CLIENT_BUILD
+
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+LINUX_LDLIBS += -lrt
+endif
+
+LDLIBS      = -lpthread $(LINUX_LDLIBS)
+
+.cpp.o:
+	$(CCC) -c $(CPPFLAGS) $< $(INCLUDES) -o $@
+
+#$(CCC) -c $(CPPFLAGS) -M $< $(INCLUDES) -o $@ list includes.
+#$(CCC) -c $(CPPFLAGS) -E $< $(INCLUDES) -o $@ pre-process only.
+
+$(TARGET_EXE): $(OBJ_FILES) 
+	$(CCC) $(CPPFLAGS) -o $(TARGET_EXE) $(OBJ_FILES) $(LDLIBS)
+
+prepare:
+	@for bindir in $(BIN_DIR); do if [ ! -d "$$bindir" ]; then \mkdir "$$bindir" ; echo making "$$bindir" ; fi; done
+	@for bindir in $(BIN_DIR); do if [ ! -d "$$bindir" ]; then \echo "could not create/read dir $$bindir"; exit 1; fi; done
+
+build: $(TARGET_EXE) 
+
+clean:
+	\rm -fr $(OBJ_FILES) $(TARGET_EXE)
+
+# on MacOS use install make using 'brew install makedepend' 
+# on Linux (debian) use apt install 'xutils-dev'
+# or if 'gcc -M' instead.
+
+LOCATION = $(CURDIR)/$(word $(words $(MAKEFILE_LIST)),$(MAKEFILE_LIST))
+MAKEFILE_NAME = $(shell basename $(LOCATION))
+
+depend:
+	makedepend -f $(MAKEFILE_NAME) -Y $(INCLUDES) -- $(CPPFLAGS) -- $(SRC_FILES) 
+
+.PHONEY: all
+.PHONEY: prepare
+.PHONEY: build
+.PHONEY: clean
+.PHONEY: depend
+
+# DO NOT DELETE
+
+../src/common/mr_global.o: ../src/common/mr_global.h
+../src/common/mr_algorithm.o: ../src/common/mr_algorithm.h
+../src/common/mr_algorithm.o: ../src/common/mr_log.h ../src/common/mr_OS.h
+../src/common/mr_algorithm.o: ../src/common/mr_string.h
+../src/common/mr_regex.o: ../src/common/mr_regex.h ../src/common/mr_pipe.h
+../src/common/mr_regex.o: ../src/common/mr_sleep.h ../src/common/mr_random.h
+../src/common/mr_regex.o: ../src/common/mr_log.h ../src/common/mr_OS.h
+../src/common/mr_regex.o: ../src/common/mr_string.h ../src/common/mr_memory.h
+../src/common/mr_regex.o: ../src/common/mr_memorylayout.h
+../src/common/mr_regex.o: ../src/common/mr_global.h
+../src/common/mr_regex.o: ../src/common/mr_configuration.h
+../src/common/mr_log.o: ../src/common/mr_log.h ../src/common/mr_OS.h
+../src/common/mr_log.o: ../src/common/mr_string.h ../src/common/mr_time.h
+../src/common/mr_log.o: ../src/common/mr_environment.h
+../src/common/mr_signal.o: ../src/common/mr_signal.h
+../src/common/mr_signal.o: ../src/common/mr_global.h ../src/common/mr_time.h
+../src/client/mr_client.o: ../src/common/mr_sleep.h ../src/common/mr_random.h
+../src/client/mr_client.o: ../src/common/mr_global.h ../src/common/mr_OS.h
+../src/client/mr_client.o: ../src/common/mr_datafile.h
+../src/client/mr_client.o: ../src/common/mr_filelock.h
+../src/client/mr_client.o: ../src/common/mr_configuration.h
+../src/client/mr_client.o: ../src/common/mr_log.h ../src/common/mr_string.h
+../src/client/mr_client.o: ../src/common/mr_memory.h
+../src/client/mr_client.o: ../src/common/mr_memorylayout.h
+../src/client/mr_client.o: ../src/common/mr_time.h ../src/common/mr_timer.h
